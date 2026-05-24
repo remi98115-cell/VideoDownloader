@@ -117,10 +117,37 @@
             .video-preview.visible { flex-direction: column; }
             .video-preview img { width: 100%; height: auto; }
         }
+        /* License screen */
+        .license-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .license-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; max-width: 440px; width: 90%; text-align: center; }
+        .license-box h2 { font-size: 22px; color: #f4f4f5; margin-bottom: 8px; }
+        .license-box p { color: var(--text2); font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
+        .license-input { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 10px; padding: 14px; color: #f4f4f5; font-size: 18px; text-align: center; letter-spacing: 2px; font-family: 'Consolas', 'Courier New', monospace; outline: none; transition: border-color 0.2s; text-transform: uppercase; }
+        .license-input:focus { border-color: var(--accent); }
+        .license-input.error { border-color: var(--red); animation: shake 0.4s; }
+        .license-input.success { border-color: var(--green); }
+        @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        .license-btn { width: 100%; margin-top: 16px; padding: 14px; font-size: 15px; }
+        .license-msg { margin-top: 12px; font-size: 13px; min-height: 20px; }
+        .license-msg.error { color: var(--red); }
+        .license-msg.success { color: var(--green); }
+        .license-icon { font-size: 48px; margin-bottom: 12px; }
     </style>
 </head>
 <body>
-<div class="app">
+
+<div class="license-overlay" id="licenseScreen" style="display:none">
+    <div class="license-box">
+        <div class="license-icon">🔑</div>
+        <h2>Activation requise</h2>
+        <p>Entrez votre cle de licence pour utiliser Video Downloader.</p>
+        <input type="text" class="license-input" id="licenseInput" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" maxlength="23" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary license-btn" onclick="activateLicense()">Activer</button>
+        <div class="license-msg" id="licenseMsg"></div>
+    </div>
+</div>
+
+<div class="app" id="mainApp">
     <header>
         <h1>Video & Music Downloader</h1>
         <p>YouTube, SoundCloud, TikTok, Instagram, Twitter, Dailymotion, Vimeo, Bandcamp, et 1800+ sites</p>
@@ -808,7 +835,63 @@ async function checkForUpdate() {
     } catch(e) {}
 }
 
+// --- LICENSE ---
+async function checkLicense() {
+    try {
+        const r = await fetch('/api/license_status');
+        const d = await r.json();
+        if (!d.licensed) {
+            document.getElementById('licenseScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('licenseInput').addEventListener('input', formatLicenseInput);
+            document.getElementById('licenseInput').addEventListener('keydown', e => { if(e.key==='Enter') activateLicense(); });
+            return false;
+        }
+        return true;
+    } catch(e) { return true; }
+}
+
+function formatLicenseInput(e) {
+    let v = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    let parts = [];
+    for (let i = 0; i < v.length && parts.length < 4; i += 5) {
+        parts.push(v.substring(i, i + 5));
+    }
+    e.target.value = parts.join('-');
+    e.target.classList.remove('error', 'success');
+    document.getElementById('licenseMsg').textContent = '';
+}
+
+async function activateLicense() {
+    const input = document.getElementById('licenseInput');
+    const msg = document.getElementById('licenseMsg');
+    const key = input.value.trim();
+    if (!key) { input.classList.add('error'); msg.textContent = 'Entrez une cle de licence'; msg.className = 'license-msg error'; return; }
+    try {
+        const r = await fetch('/api/activate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key}) });
+        const d = await r.json();
+        if (d.status === 'ok') {
+            input.classList.remove('error');
+            input.classList.add('success');
+            msg.textContent = 'Licence activee !';
+            msg.className = 'license-msg success';
+            setTimeout(() => {
+                document.getElementById('licenseScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+            }, 800);
+        } else {
+            input.classList.add('error');
+            input.classList.remove('success');
+            msg.textContent = d.message || 'Cle invalide';
+            msg.className = 'license-msg error';
+        }
+    } catch(e) { msg.textContent = 'Erreur de connexion'; msg.className = 'license-msg error'; }
+}
+
 (async function init() {
+    const licensed = await checkLicense();
+    if (!licensed) return;
+
     try {
         const r = await fetch('/api/version');
         const v = await r.json();

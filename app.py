@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import uuid
+import hashlib
 import threading
 import time
 import platform
@@ -14,6 +15,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 import yt_dlp
 
 APP_VERSION = "1.3.0"
+LICENSE_SECRET = "VDL-2026-S3CR3T-K3Y"
 UPDATE_URL = ""
 
 app = Flask(__name__)
@@ -42,7 +44,32 @@ def find_ffmpeg():
         return os.path.dirname(path)
     return None
 
+LICENSE_FILE = os.path.join(BASE_DIR, "license.key")
 BROWSER_CHOICES = ["chrome", "firefox", "edge", "brave", "opera", "chromium"]
+
+
+def validate_license(key):
+    key = key.strip().upper()
+    parts = key.split('-')
+    if len(parts) != 4:
+        return False
+    base = '-'.join(parts[:3])
+    check = parts[3]
+    expected = hashlib.sha256((base + LICENSE_SECRET).encode()).hexdigest()[:5].upper()
+    return check == expected
+
+
+def is_licensed():
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r", encoding="utf-8") as f:
+            key = f.read().strip()
+        return validate_license(key)
+    return False
+
+
+def save_license(key):
+    with open(LICENSE_FILE, "w", encoding="utf-8") as f:
+        f.write(key.strip().upper())
 
 downloads = {}
 
@@ -698,6 +725,23 @@ def update_ytdlp():
         return jsonify({"status": "error", "message": result.stderr}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/license_status")
+def license_status():
+    return jsonify({"licensed": is_licensed()})
+
+
+@app.route("/api/activate", methods=["POST"])
+def activate_license():
+    data = request.json
+    key = data.get("key", "").strip()
+    if not key:
+        return jsonify({"status": "error", "message": "Veuillez entrer une cle"}), 400
+    if validate_license(key):
+        save_license(key)
+        return jsonify({"status": "ok", "message": "Licence activee avec succes !"})
+    return jsonify({"status": "error", "message": "Cle invalide. Verifiez et reessayez."}), 400
 
 
 @app.route("/api/version")

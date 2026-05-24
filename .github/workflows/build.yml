@@ -73,6 +73,28 @@ jobs:
       - name: Build
         run: python build.py
 
+      - name: Bundle FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir dist\ffmpeg
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath fftemp
+          Get-ChildItem fftemp -Recurse -Filter "ffmpeg.exe" | Copy-Item -Destination dist\ffmpeg\
+          Remove-Item fftemp, ffmpeg.zip -Recurse -Force
+        shell: pwsh
+
+      - name: Bundle FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist/VideoDownloader.app/Contents/Resources/ffmpeg
+          cp $(which ffmpeg) dist/VideoDownloader.app/Contents/Resources/ffmpeg/
+
+      - name: Bundle FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist/ffmpeg
+          cp $(which ffmpeg) dist/ffmpeg/
+
       - name: Rename artifact (Linux)
         if: matrix.name == 'Linux'
         run: mv dist/VideoDownloader dist/VideoDownloader-Linux
@@ -83,13 +105,25 @@ jobs:
           cd dist
           zip -r VideoDownloader-macOS.zip VideoDownloader.app
 
+      - name: Package Windows with FFmpeg
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path dist\VideoDownloader.exe, dist\ffmpeg -DestinationPath dist\VideoDownloader-Windows.zip
+        shell: pwsh
+
+      - name: Package Linux with FFmpeg
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar czf VideoDownloader-Linux.tar.gz VideoDownloader-Linux ffmpeg/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-${{ matrix.name }}
           path: |
-            dist/VideoDownloader.exe
-            dist/VideoDownloader-Linux
+            dist/VideoDownloader-Windows.zip
+            dist/VideoDownloader-Linux.tar.gz
             dist/VideoDownloader-macOS.zip
 
   release:
@@ -108,10 +142,9 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir release
-          cp artifacts/VideoDownloader-Windows/VideoDownloader.exe release/VideoDownloader-Windows.exe
-          cp artifacts/VideoDownloader-macOS/VideoDownloader-macOS.zip release/VideoDownloader-macOS.zip
-          cp artifacts/VideoDownloader-Linux/VideoDownloader-Linux release/VideoDownloader-Linux
-          chmod +x release/VideoDownloader-Linux
+          cp artifacts/VideoDownloader-Windows/VideoDownloader-Windows.zip release/
+          cp artifacts/VideoDownloader-macOS/VideoDownloader-macOS.zip release/
+          cp artifacts/VideoDownloader-Linux/VideoDownloader-Linux.tar.gz release/
 
       - name: Get version from tag
         id: version
@@ -140,15 +173,12 @@ jobs:
             ## VideoDownloader ${{ steps.version.outputs.VERSION }}
 
             ### Telechargement
-            - **Windows** : `VideoDownloader-Windows.exe`
+            - **Windows** : `VideoDownloader-Windows.zip`
             - **macOS** : `VideoDownloader-macOS.zip`
-            - **Linux** : `VideoDownloader-Linux`
+            - **Linux** : `VideoDownloader-Linux.tar.gz`
 
-            ### Installation
-            - **Windows** : Lancez le .exe directement
-            - **macOS** : Dézippez puis lancez `VideoDownloader.app`
-            - **Linux** : `chmod +x VideoDownloader-Linux && ./VideoDownloader-Linux`
+            FFmpeg est inclus dans chaque version.
           files: |
-            release/VideoDownloader-Windows.exe
+            release/VideoDownloader-Windows.zip
             release/VideoDownloader-macOS.zip
-            release/VideoDownloader-Linux
+            release/VideoDownloader-Linux.tar.gz

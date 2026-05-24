@@ -35,6 +35,7 @@ Name: "startmenu"; Description: "Creer un raccourci dans le menu Demarrer"; Grou
 Source: "dist\VideoDownloader.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "icon.png"; DestDir: "{app}"; Flags: ignoreversion
+Source: "ffmpeg\ffmpeg.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
 
 [Icons]
 Name: "{autodesktop}\Video Downloader"; Filename: "{app}\VideoDownloader.exe"; IconFilename: "{app}\icon.ico"; Tasks: desktopicon

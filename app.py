@@ -35,8 +35,12 @@ os.makedirs(MUSIC_DIR, exist_ok=True)
 
 
 def find_ffmpeg():
-    for d in (FFMPEG_DIR, BASE_DIR):
-        name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+    name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+    search_dirs = [FFMPEG_DIR, BASE_DIR]
+    # macOS .app bundle
+    if platform.system() == "Darwin" and getattr(sys, "frozen", False):
+        search_dirs.insert(0, os.path.join(os.path.dirname(BASE_DIR), "Resources", "ffmpeg"))
+    for d in search_dirs:
         if os.path.isfile(os.path.join(d, name)):
             return d
     path = shutil.which("ffmpeg")

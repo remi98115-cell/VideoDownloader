@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Downloader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0e0e10; --surface: #18181b; --surface2: #27272a;
+            --accent: #3b82f6; --accent2: #60a5fa; --green: #22c55e;
+            --red: #ef4444; --orange: #f59e0b; --music: #3b82f6;
+            --text: #d4d4d8; --text2: #71717a; --border: #2e2e32; --radius: 10px;
+        }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .app { max-width: 920px; margin: 0 auto; padding: 16px; }
+        header { text-align: center; padding: 20px 0 14px; }
+        header h1 { font-size: 24px; font-weight: 600; color: #f4f4f5; margin-bottom: 4px; letter-spacing: -0.3px; }
+        header p { color: var(--text2); font-size: 13px; }
+        .site-badges { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+        .site-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
+        .tabs { display: flex; gap: 3px; background: var(--surface); border-radius: var(--radius); padding: 3px; margin-bottom: 16px; }
+        .tab { flex: 1; padding: 9px; text-align: center; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); transition: all 0.2s; border: none; background: none; }
+        .tab:hover { color: var(--text); }
+        .tab.active { background: var(--surface2); color: #f4f4f5; }
+        .tab.music-tab.active { background: var(--surface2); color: #f4f4f5; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .input-group { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+        .input-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+        .url-input-row { display: flex; gap: 8px; }
+        input[type="text"], textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus, textarea:focus { border-color: #52525b; }
+        textarea { width: 100%; min-height: 90px; resize: vertical; font-family: inherit; }
+        .btn { padding: 10px 20px; border-radius: 7px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-music { background: var(--accent); color: white; }
+        .btn-music:hover { background: #2563eb; }
+        .btn-secondary { background: var(--surface2); color: var(--text); }
+        .btn-secondary:hover { background: #3f3f46; }
+        .btn-danger { background: transparent; color: var(--red); border: 1px solid #7f1d1d; }
+        .btn-danger:hover { background: #7f1d1d; color: #fca5a5; }
+        .btn-sm { padding: 5px 12px; font-size: 11px; }
+        .options-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .option-card { flex: 1; min-width: 130px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 12px; }
+        .option-card label { margin-bottom: 6px; }
+        select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; padding: 6px 0; }
+        .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+        .video-preview { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; display: none; border: 1px solid var(--border); }
+        .video-preview.visible { display: flex; gap: 14px; }
+        .video-preview img { width: 160px; height: 90px; object-fit: cover; border-radius: 7px; }
+        .video-info h3 { font-size: 14px; margin-bottom: 4px; line-height: 1.3; }
+        .video-info .meta { font-size: 12px; color: var(--text2); }
+        .site-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-top: 4px; }
+        .site-youtube { background: rgba(239,68,68,0.12); color: #f87171; }
+        .site-soundcloud { background: rgba(251,146,60,0.12); color: #fb923c; }
+        .site-tiktok { background: rgba(148,163,184,0.12); color: #94a3b8; }
+        .site-twitter { background: rgba(148,163,184,0.12); color: #94a3b8; }
+        .site-instagram { background: rgba(251,146,60,0.12); color: #fb923c; }
+        .site-spotify { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .site-other { background: rgba(59,130,246,0.12); color: var(--accent2); }
+        .playlist-badge { display: inline-block; background: var(--surface2); color: var(--text); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 4px; margin-left: 6px; }
+        .downloads-list { display: flex; flex-direction: column; gap: 8px; }
+        .download-item { background: var(--surface); border-radius: var(--radius); padding: 14px; border: 1px solid var(--border); }
+        .download-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .download-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 500px; }
+        .download-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .status-downloading { background: rgba(59,130,246,0.15); color: var(--accent2); }
+        .status-completed { background: rgba(34,197,94,0.15); color: var(--green); }
+        .status-error { background: rgba(239,68,68,0.15); color: #f87171; }
+        .status-processing { background: rgba(245,158,11,0.15); color: var(--orange); }
+        .progress-bar { width: 100%; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+        .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+        .progress-fill.music { background: var(--accent); }
+        .progress-details { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); }
+        .download-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .file-item { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .file-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 450px; }
+        .file-meta { display: flex; gap: 12px; align-items: center; font-size: 11px; color: var(--text2); }
+        .file-type-badge { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+        .file-type-video { background: rgba(59,130,246,0.15); color: var(--accent2); }
+        .file-type-music { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .history-item { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+        .history-item img { width: 70px; height: 40px; object-fit: cover; border-radius: 6px; }
+        .history-info { flex: 1; min-width: 0; }
+        .history-info h4 { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-info .meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+        .search-box { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); }
+        .search-row { display: flex; gap: 8px; }
+        .search-results { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .search-item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: var(--bg); border-radius: 7px; cursor: pointer; transition: background 0.15s; border: 1px solid transparent; }
+        .search-item:hover { background: var(--surface2); border-color: #3f3f46; }
+        .search-item img { width: 80px; height: 45px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .search-item-info { flex: 1; min-width: 0; }
+        .search-item-info h4 { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-item-info p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+        .search-item .btn { flex-shrink: 0; }
+        .search-source { display: flex; gap: 4px; margin-bottom: 8px; }
+        .search-source button { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text2); font-size: 11px; cursor: pointer; }
+        .search-source button.active { background: var(--surface2); color: #f4f4f5; border-color: #52525b; }
+        .search-source button.active.sc { background: var(--surface2); color: #fb923c; border-color: #52525b; }
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--text2); font-size: 13px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast-container { position: fixed; bottom: 16px; right: 16px; z-index: 1000; display: flex; flex-direction: column; gap: 6px; }
+        .toast { background: var(--surface2); color: var(--text); padding: 10px 16px; border-radius: 7px; font-size: 12px; border: 1px solid var(--border); animation: slideIn 0.3s ease; max-width: 320px; }
+        .toast.error { border-color: #7f1d1d; }
+        .toast.success { border-color: #166534; }
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @media (max-width: 600px) {
+            .app { padding: 10px; }
+            .url-input-row { flex-direction: column; }
+            .options-row { flex-direction: column; }
+            .video-preview.visible { flex-direction: column; }
+            .video-preview img { width: 100%; height: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <h1>Video & Music Downloader</h1>
+        <p>YouTube, SoundCloud, TikTok, Instagram, Twitter, Dailymotion, Vimeo, Bandcamp, et 1800+ sites</p>
+        <div class="site-badges">
+            <span class="site-badge">YouTube</span>
+            <span class="site-badge">SoundCloud</span>
+            <span class="site-badge">TikTok</span>
+            <span class="site-badge">Instagram</span>
+            <span class="site-badge">Twitter/X</span>
+            <span class="site-badge">Spotify*</span>
+            <span class="site-badge">Dailymotion</span>
+            <span class="site-badge">Vimeo</span>
+            <span class="site-badge">Twitch</span>
+            <span class="site-badge">Reddit</span>
+            <span class="site-badge">Facebook</span>
+            <span class="site-badge">Bandcamp</span>
+            <span class="site-badge">+1800</span>
+        </div>
+    </header>
+
+    <div id="settings-banner" class="input-group" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div>
+                <label style="margin:0; font-size:13px; color:var(--text);">yt-dlp <span id="ytdlp-version" style="color:var(--green);font-size:11px;"></span></label>
+                <p style="font-size:11px; color:var(--text2); margin-top:2px;">Si un site bloque, mettez a jour yt-dlp</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="updateYtdlp()" id="btn-update">Mettre a jour</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--border);">
+            <label style="margin:0; font-size:11px; color:var(--text2);">FFmpeg:</label>
+            <span id="ffmpeg-status" style="font-size:11px;"></span>
+            <button class="btn btn-secondary btn-sm" onclick="installFfmpeg()" id="btn-install-ffmpeg" style="font-size:10px; display:none;">Installer FFmpeg</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--border);">
+            <label style="margin:0; font-size:11px; color:var(--text2);">Cookies:</label>
+            <select id="browser-select" style="width:auto; font-size:11px; padding:4px 8px;">
+                <option value="">Aucun</option>
+                <option value="chrome">Chrome</option>
+                <option value="firefox">Firefox</option>
+                <option value="edge">Edge</option>
+                <option value="brave">Brave</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="testCookies()" id="btn-test-cookies" style="font-size:10px;">Tester</button>
+            <span id="cookie-result" style="font-size:11px;"></span>
+            <span id="cookie-file-status" style="font-size:10px; color:var(--text2);"></span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('download', this)">Video</button>
+        <button class="tab music-tab" onclick="switchTab('music', this)">Musique</button>
+        <button class="tab" onclick="switchTab('batch', this)">Batch</button>
+        <button class="tab" onclick="switchTab('files', this)">Fichiers</button>
+        <button class="tab" onclick="switchTab('history', this)">Historique</button>
+    </div>
+
+    <!-- VIDEO -->
+    <div id="panel-download" class="panel active">
+        <div class="search-box">
+            <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:6px;">Rechercher une video</label>
+            <div class="search-row">
+                <input type="text" id="video-search" placeholder="Tapez un nom de video..." onkeydown="if(event.key==='Enter') doSearch('video')">
+                <button class="btn btn-primary" onclick="doSearch('video')" id="btn-video-search">Rechercher</button>
+            </div>
+            <div id="video-search-results" class="search-results"></div>
+        </div>
+        <div class="input-group">
+            <label>Ou collez une URL directement</label>
+            <div class="url-input-row">
+                <input type="text" id="url-input" placeholder="URL (YouTube, TikTok, Instagram, Twitter...)" onkeydown="if(event.key==='Enter') fetchInfo()">
+                <button class="btn btn-secondary" onclick="fetchInfo()" id="btn-info">Info</button>
+                <button class="btn btn-primary" onclick="startDownload('video')" id="btn-download">Telecharger</button>
+            </div>
+        </div>
+        <div id="video-preview" class="video-preview">
+            <img id="preview-thumb" src="" alt="">
+            <div class="video-info">
+                <h3 id="preview-title"></h3>
+                <p class="meta" id="preview-meta"></p>
+                <span id="preview-site-tag" class="site-tag" style="display:none"></span>
+                <span class="playlist-badge" id="preview-badge" style="display:none"></span>
+            </div>
+        </div>
+        <div class="input-group">
+            <div class="options-row">
+                <div class="option-card">
+                    <label>Format</label>
+                    <select id="format-select" onchange="toggleQuality()">
+                        <option value="mp4">MP4 (Video)</option>
+                        <option value="mp3">MP3 (Audio)</option>
+                    </select>
+                </div>
+                <div class="option-card" id="quality-option">
+                    <label>Qualite</label>
+                    <select id="quality-select">
+                        <option value="best">Meilleure</option>
+                        <option value="1080">1080p</option>
+                        <option value="720">720p</option>
+                        <option value="480">480p</option>
+                        <option value="360">360p</option>
+                    </select>
+                </div>
+                <div class="option-card">
+                    <label>Options</label>
+                    <label class="checkbox-label"><input type="checkbox" id="subtitles-check"> Sous-titres</label>
+                </div>
+            </div>
+        </div>
+        <div id="active-downloads" class="downloads-list"></div>
+    </div>
+
+    <!-- MUSIQUE -->
+    <div id="panel-music" class="panel">
+        <div class="search-box" style="border-color:var(--border);">
+            <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:6px;">Rechercher une musique</label>
+            <div class="search-source" id="music-search-source">
+                <button class="active" onclick="setMusicSource('youtube', this)">YouTube</button>
+                <button onclick="setMusicSource('soundcloud', this)">SoundCloud</button>
+            </div>
+            <div class="search-row">
+                <input type="text" id="music-search" placeholder="Artiste, titre de chanson..." onkeydown="if(event.key==='Enter') doSearch('music')">
+                <button class="btn btn-music" onclick="doSearch('music')" id="btn-music-search">Rechercher</button>
+            </div>
+            <div id="music-search-results" class="search-results"></div>
+        </div>
+        <div class="input-group" style="border-color:var(--border);">
+            <label>Ou collez une URL directement</label>
+            <div class="url-input-row">
+                <input type="text" id="music-url" placeholder="URL (YouTube, SoundCloud, Bandcamp, Spotify...)" onkeydown="if(event.key==='Enter') fetchMusicInfo()">
+                <button class="btn btn-secondary" onclick="fetchMusicInfo()" id="btn-music-info">Info</button>
+                <button class="btn btn-music" onclick="startDownload('music')" id="btn-music-dl">Telecharger</button>
+            </div>
+        </div>
+        <div id="music-preview" class="video-preview">
+            <img id="music-thumb" src="" alt="">
+            <div class="video-info">
+                <h3 id="music-title"></h3>
+                <p class="meta" id="music-meta"></p>
+                <span id="music-site-tag" class="site-tag" style="display:none"></span>
+                <span class="playlist-badge" id="music-badge" style="display:none"></span>
+            </div>
+        </div>
+        <div class="input-group">
+            <div class="options-row">
+                <div class="option-card">
+                    <label>Format audio</label>
+                    <select id="music-format">
+                        <option value="mp3">MP3</option>
+                        <option value="flac">FLAC (lossless)</option>
+                        <option value="wav">WAV</option>
+                        <option value="aac">AAC</option>
+                        <option value="ogg">OGG Vorbis</option>
+                    </select>
+                </div>
+                <div class="option-card" id="music-quality-card">
+                    <label>Qualite audio</label>
+                    <select id="music-quality">
+                        <option value="320" selected>320 kbps (max)</option>
+                        <option value="256">256 kbps</option>
+                        <option value="192">192 kbps</option>
+                        <option value="128">128 kbps</option>
+                    </select>
+                </div>
+                <div class="option-card">
+                    <label>Metadata</label>
+                    <label class="checkbox-label"><input type="checkbox" id="embed-thumb" checked> Pochette album</label>
+                </div>
+            </div>
+        </div>
+        <div id="music-downloads" class="downloads-list"></div>
+    </div>
+
+    <!-- BATCH -->
+    <div id="panel-batch" class="panel">
+        <div class="input-group">
+            <label>URLs (une par ligne - tous sites melanges)</label>
+            <textarea id="batch-urls" placeholder="https://youtube.com/watch?v=...&#10;https://soundcloud.com/...&#10;https://tiktok.com/...&#10;https://instagram.com/p/..."></textarea>
+        </div>
+        <div class="input-group">
+            <div class="options-row">
+                <div class="option-card">
+                    <label>Format</label>
+                    <select id="batch-format">
+                        <option value="mp4">MP4 (Video)</option>
+                        <option value="mp3">MP3 (Audio)</option>
+                        <option value="flac">FLAC</option>
+                    </select>
+                </div>
+                <div class="option-card">
+                    <label>Qualite</label>
+                    <select id="batch-quality">
+                        <option value="best">Meilleure</option>
+                        <option value="720">720p</option>
+                    </select>
+                </div>
+                <div class="option-card">
+                    <label>Options</label>
+                    <label class="checkbox-label"><input type="checkbox" id="batch-subtitles"> Sous-titres</label>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="startBatchDownload()" style="width:100%;">Telecharger tout</button>
+        <div id="batch-downloads" class="downloads-list" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- FICHIERS -->
+    <div id="panel-files" class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="font-size:16px;">Fichiers telecharges</h2>
+            <div style="display:flex; gap:6px;">
+                <button class="btn btn-primary btn-sm" onclick="openFolder('video')">Dossier videos</button>
+                <button class="btn btn-music btn-sm" onclick="openFolder('music')">Dossier musique</button>
+                <button class="btn btn-secondary btn-sm" onclick="loadFiles()">Actualiser</button>
+            </div>
+        </div>
+        <div id="files-list" class="downloads-list"></div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    <div id="panel-history" class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="font-size:16px;">Historique</h2>
+            <button class="btn btn-danger btn-sm" onclick="clearHistory()">Effacer</button>
+        </div>
+        <div id="history-list" class="downloads-list"></div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer style="text-align:center; padding:20px 0 10px; border-top:1px solid var(--border); margin-top:20px;">
+        <span id="app-version" style="font-size:12px; color:var(--text2);"></span>
+        <div id="update-banner" style="display:none; margin-top:8px; padding:10px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px;">
+            <span style="font-size:12px; color:var(--text); font-weight:500;" id="update-text"></span>
+            <a id="update-link" href="#" target="_blank" style="margin-left:8px; font-size:12px; color:var(--accent2); text-decoration:underline;">Telecharger</a>
+        </div>
+    </footer>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+let currentInfo = null;
+let musicSearchSource = 'youtube';
+
+function getB() { return document.getElementById('browser-select').value; }
+
+function setMusicSource(src, el) {
+    musicSearchSource = src;
+    document.querySelectorAll('#music-search-source button').forEach(b => {
+        b.classList.remove('active', 'sc');
+    });
+    el.classList.add('active');
+    if (src === 'soundcloud') el.classList.add('sc');
+}
+
+function fmtViews(n) {
+    if (!n) return '';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M vues';
+    if (n >= 1000) return (n/1000).toFixed(0) + 'K vues';
+    return n + ' vues';
+}
+
+async function doSearch(mode) {
+    const inputId = mode === 'music' ? 'music-search' : 'video-search';
+    const btnId = mode === 'music' ? 'btn-music-search' : 'btn-video-search';
+    const resultsId = mode === 'music' ? 'music-search-results' : 'video-search-results';
+    const query = document.getElementById(inputId).value.trim();
+    if (!query) return;
+
+    const btn = document.getElementById(btnId);
+    const container = document.getElementById(resultsId);
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:12px;"><span class="spinner"></span> Recherche en cours...</div>';
+
+    const source = mode === 'music' ? musicSearchSource : 'youtube';
+
+    try {
+        const r = await fetch('/api/search', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({query, source, count: 8, browser: getB()})
+        });
+        const data = await r.json();
+
+        if (data.error) {
+            container.innerHTML = `<div class="empty-state" style="padding:16px;">${data.error}</div>`;
+            return;
+        }
+
+        if (!data.results || !data.results.length) {
+            container.innerHTML = '<div class="empty-state" style="padding:16px;">Aucun resultat</div>';
+            return;
+        }
+
+        container.innerHTML = data.results.map((r, i) => `
+            <div class="search-item" onclick="selectResult('${mode}', '${(r.url||'').replace(/'/g,"\\'")}')">
+                ${r.thumbnail ? `<img src="${r.thumbnail}" alt="" onerror="this.style.display='none'">` : '<div style="width:80px;height:45px;background:var(--surface2);border-radius:6px;flex-shrink:0;"></div>'}
+                <div class="search-item-info">
+                    <h4>${r.title}</h4>
+                    <p>${r.channel||''} ${r.duration ? '- '+fmtDur(r.duration) : ''} ${r.view_count ? '- '+fmtViews(r.view_count) : ''}</p>
+                </div>
+                <button class="btn ${mode==='music'?'btn-music':'btn-primary'} btn-sm" onclick="event.stopPropagation(); quickDl('${mode}', '${(r.url||'').replace(/'/g,"\\'")}')">DL</button>
+            </div>
+        `).join('');
+
+    } catch(e) {
+        container.innerHTML = '<div class="empty-state" style="padding:16px;">Erreur de connexion</div>';
+    } finally {
+        btn.innerHTML = 'Rechercher'; btn.disabled = false;
+    }
+}
+
+function selectResult(mode, url) {
+    if (mode === 'music') {
+        document.getElementById('music-url').value = url;
+        fetchMusicInfo();
+    } else {
+        document.getElementById('url-input').value = url;
+        fetchInfo();
+    }
+}
+
+function quickDl(mode, url) {
+    if (mode === 'music') {
+        document.getElementById('music-url').value = url;
+        startDownload('music');
+    } else {
+        document.getElementById('url-input').value = url;
+        startDownload('video');
+    }
+}
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'files') loadFiles();
+    if (name === 'history') loadHistory();
+}
+
+function toggleQuality() {
+    const f = document.getElementById('format-select').value;
+    document.getElementById('quality-option').style.display = f === 'mp3' ? 'none' : 'block';
+}
+
+function showToast(msg, type='info') {
+    const c = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+}
+
+function fmtDur(s) {
+    if (!s) return '';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h) return `${h}h${String(m).padStart(2,'0')}m`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function siteTag(site) {
+    const cls = ({youtube:'site-youtube',soundcloud:'site-soundcloud',tiktok:'site-tiktok',twitter:'site-twitter',instagram:'site-instagram',spotify:'site-spotify'})[site] || 'site-other';
+    return `<span class="site-tag ${cls}">${site}</span>`;
+}
+
+async function fetchInfo() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) return;
+    const btn = document.getElementById('btn-info');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    try {
+        const r = await fetch('/api/info', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, browser:getB()})});
+        const d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); return; }
+        showPreview('video', d);
+    } catch(e) { showToast('Erreur de connexion', 'error'); }
+    finally { btn.innerHTML = 'Info'; btn.disabled = false; }
+}
+
+async function fetchMusicInfo() {
+    const url = document.getElementById('music-url').value.trim();
+    if (!url) return;
+    const btn = document.getElementById('btn-music-info');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    try {
+        const r = await fetch('/api/info', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, browser:getB()})});
+        const d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); return; }
+        showPreview('music', d);
+    } catch(e) { showToast('Erreur de connexion', 'error'); }
+    finally { btn.innerHTML = 'Info'; btn.disabled = false; }
+}
+
+function showPreview(mode, data) {
+    const pre = mode === 'music' ? 'music' : 'preview';
+    const preview = document.getElementById(mode === 'music' ? 'music-preview' : 'video-preview');
+    const thumb = document.getElementById(mode === 'music' ? 'music-thumb' : 'preview-thumb');
+    const title = document.getElementById(mode === 'music' ? 'music-title' : 'preview-title');
+    const meta = document.getElementById(mode === 'music' ? 'music-meta' : 'preview-meta');
+    const badge = document.getElementById(mode === 'music' ? 'music-badge' : 'preview-badge');
+    const stag = document.getElementById(mode === 'music' ? 'music-site-tag' : 'preview-site-tag');
+
+    if (data.type === 'playlist') {
+        title.textContent = data.title;
+        meta.textContent = `${data.count} elements`;
+        badge.textContent = `Playlist - ${data.count}`;
+        badge.style.display = 'inline-block';
+    } else {
+        title.textContent = data.title;
+        meta.textContent = `${data.channel||''} ${data.channel?'-':''} ${fmtDur(data.duration)}`;
+        badge.style.display = 'none';
+    }
+
+    if (data.site) {
+        stag.className = 'site-tag ' + (({youtube:'site-youtube',soundcloud:'site-soundcloud',tiktok:'site-tiktok',twitter:'site-twitter',instagram:'site-instagram',spotify:'site-spotify'})[data.site]||'site-other');
+        stag.textContent = data.site;
+        stag.style.display = 'inline-block';
+    }
+
+    thumb.src = data.thumbnail || '';
+    thumb.style.display = data.thumbnail ? 'block' : 'none';
+    preview.classList.add('visible');
+}
+
+async function startDownload(mode) {
+    let url, format, quality, subtitles, audioQ, embedThumb, containerId;
+
+    if (mode === 'music') {
+        url = document.getElementById('music-url').value.trim();
+        format = document.getElementById('music-format').value;
+        audioQ = document.getElementById('music-quality').value;
+        embedThumb = document.getElementById('embed-thumb').checked;
+        quality = 'best'; subtitles = false;
+        containerId = 'music-downloads';
+    } else {
+        url = document.getElementById('url-input').value.trim();
+        format = document.getElementById('format-select').value;
+        quality = document.getElementById('quality-select').value;
+        subtitles = document.getElementById('subtitles-check').checked;
+        audioQ = '320'; embedThumb = true;
+        containerId = 'active-downloads';
+    }
+
+    if (!url) { showToast('Entrez une URL', 'error'); return; }
+
+    try {
+        const r = await fetch('/api/download', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({urls:[url], format, quality, subtitles, browser:getB(), audio_quality:audioQ, embed_thumb:embedThumb})});
+        const d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); return; }
+        d.task_ids.forEach(id => trackDownload(id, containerId, mode === 'music'));
+        showToast('Telechargement lance !', 'success');
+    } catch(e) { showToast('Erreur', 'error'); }
+}
+
+async function startBatchDownload() {
+    const text = document.getElementById('batch-urls').value.trim();
+    const urls = text.split('\n').map(u=>u.trim()).filter(u=>u);
+    if (!urls.length) { showToast('Entrez au moins une URL', 'error'); return; }
+    const format = document.getElementById('batch-format').value;
+    const quality = document.getElementById('batch-quality').value;
+    const subtitles = document.getElementById('batch-subtitles').checked;
+    const isMusic = ['mp3','flac','wav','aac','ogg'].includes(format);
+    try {
+        const r = await fetch('/api/download', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({urls, format, quality, subtitles, browser:getB(), audio_quality:'320', embed_thumb:true})});
+        const d = await r.json();
+        if (d.error) { showToast(d.error, 'error'); return; }
+        d.task_ids.forEach(id => trackDownload(id, 'batch-downloads', isMusic));
+        showToast(`${urls.length} telechargements lances`, 'success');
+    } catch(e) { showToast('Erreur', 'error'); }
+}
+
+function trackDownload(taskId, containerId, isMusic) {
+    const c = document.getElementById(containerId);
+    const item = document.createElement('div');
+    item.className = 'download-item'; item.id = 'task-' + taskId;
+    item.innerHTML = `
+        <div class="download-header">
+            <span class="download-title">Preparation...</span>
+            <span class="download-status status-downloading">En attente</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${isMusic?'music':''}" style="width:0%"></div></div>
+        <div class="progress-details"><span class="dl-percent">0%</span><span class="dl-speed">--</span><span class="dl-eta">--:--</span></div>
+        <div class="download-actions"></div>`;
+    c.prepend(item);
+    pollProgress(taskId, isMusic);
+}
+
+function pollProgress(taskId, isMusic) {
+    const iv = setInterval(async () => {
+        try {
+            const r = await fetch('/api/progress_poll/' + taskId);
+            const d = await r.json();
+            updateUI(taskId, d, isMusic);
+            if (d.status === 'completed' || d.status === 'error') clearInterval(iv);
+        } catch(e) {}
+    }, 800);
+}
+
+function updateUI(taskId, data, isMusic) {
+    const item = document.getElementById('task-' + taskId);
+    if (!item) return;
+    const title = item.querySelector('.download-title');
+    const status = item.querySelector('.download-status');
+    const fill = item.querySelector('.progress-fill');
+    const pct = item.querySelector('.dl-percent');
+    const spd = item.querySelector('.dl-speed');
+    const eta = item.querySelector('.dl-eta');
+    const actions = item.querySelector('.download-actions');
+
+    if (data.current_title) {
+        let l = data.current_title;
+        if (data.total_videos > 1) l = `[${data.current_video}/${data.total_videos}] ${l}`;
+        title.textContent = l;
+    } else if (data.title) title.textContent = data.title;
+
+    if (data.status === 'downloading') {
+        status.className = 'download-status status-downloading'; status.textContent = 'Telechargement';
+        fill.style.width = data.percent+'%'; pct.textContent = data.percent+'%';
+        spd.textContent = data.speed||'--'; eta.textContent = data.eta||'--:--';
+    } else if (data.status === 'processing') {
+        status.className = 'download-status status-processing'; status.textContent = 'Conversion';
+        fill.style.width = '100%'; pct.textContent = '100%'; spd.textContent = ''; eta.textContent = 'Conversion...';
+    } else if (data.status === 'completed') {
+        status.className = 'download-status status-completed'; status.textContent = 'Termine';
+        fill.style.width = '100%'; pct.textContent = '100%'; spd.textContent = ''; eta.textContent = '';
+        actions.innerHTML = '';
+        (data.files||[]).forEach(f => {
+            const b = document.createElement('button'); b.className = 'btn btn-secondary btn-sm';
+            b.textContent = `${f.title||f.filename} (${f.size})`; b.onclick = ()=>openFile(f.filename);
+            actions.appendChild(b);
+        });
+        const fb = document.createElement('button'); fb.className = `btn ${isMusic?'btn-music':'btn-primary'} btn-sm`;
+        fb.textContent = isMusic ? 'Dossier musique' : 'Dossier videos';
+        fb.onclick = () => openFolder(isMusic ? 'music' : 'video');
+        actions.appendChild(fb);
+        showToast('Telechargement termine !', 'success');
+    } else if (data.status === 'error') {
+        status.className = 'download-status status-error'; status.textContent = 'Erreur';
+        fill.style.width = '0%'; pct.textContent = data.message||'Erreur';
+        showToast('Erreur: '+(data.message||'inconnue'), 'error');
+    }
+}
+
+async function openFolder(type) { try { await fetch('/api/open_folder?type='+(type||'video')); } catch(e) {} }
+async function openFile(fn) { try { await fetch('/api/open_file/'+encodeURIComponent(fn)); } catch(e) {} }
+
+async function loadFiles() {
+    const c = document.getElementById('files-list');
+    try {
+        const r = await fetch('/api/files');
+        const files = await r.json();
+        if (!files.length) { c.innerHTML = '<div class="empty-state">Aucun fichier</div>'; return; }
+        c.innerHTML = files.map(f => `
+            <div class="file-item">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="file-type-badge ${f.is_music?'file-type-music':'file-type-video'}">${f.is_music?'MUSIQUE':'VIDEO'}</span>
+                    <span class="file-name" title="${f.filename}">${f.filename}</span>
+                </div>
+                <div class="file-meta">
+                    <span>${f.size}</span><span>${f.date}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="openFile('${f.filename.replace(/'/g,"\\'")}')">Ouvrir</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteFile('${f.filename.replace(/'/g,"\\'")}')">Suppr</button>
+                </div>
+            </div>`).join('');
+    } catch(e) { c.innerHTML = '<div class="empty-state">Erreur</div>'; }
+}
+
+async function deleteFile(fn) {
+    if (!confirm('Supprimer '+fn+' ?')) return;
+    await fetch('/api/delete/'+encodeURIComponent(fn), {method:'DELETE'});
+    showToast('Supprime', 'success'); loadFiles();
+}
+
+async function loadHistory() {
+    const c = document.getElementById('history-list');
+    try {
+        const r = await fetch('/api/history');
+        const h = await r.json();
+        if (!h.length) { c.innerHTML = '<div class="empty-state">Aucun historique</div>'; return; }
+        c.innerHTML = h.map(x => `
+            <div class="history-item">
+                ${x.thumbnail?`<img src="${x.thumbnail}" alt="" onerror="this.style.display='none'">`:''}
+                <div class="history-info">
+                    <h4>${x.title}</h4>
+                    <p class="meta">
+                        <span class="file-type-badge ${x.is_music?'file-type-music':'file-type-video'}" style="font-size:9px;">${x.is_music?'MUSIQUE':'VIDEO'}</span>
+                        ${x.format.toUpperCase()} - ${x.size} - ${x.date}
+                        ${x.site?` - ${x.site}`:''}
+                    </p>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="reDl('${x.url}', ${x.is_music||false})">Re-DL</button>
+            </div>`).join('');
+    } catch(e) { c.innerHTML = '<div class="empty-state">Erreur</div>'; }
+}
+
+function reDl(url, isMusic) {
+    if (isMusic) { document.getElementById('music-url').value = url; switchTab('music', document.querySelectorAll('.tab')[1]); }
+    else { document.getElementById('url-input').value = url; switchTab('download', document.querySelectorAll('.tab')[0]); }
+}
+
+async function clearHistory() {
+    if (!confirm("Effacer l'historique ?")) return;
+    await fetch('/api/history/clear', {method:'POST'});
+    loadHistory(); showToast('Historique efface', 'success');
+}
+
+async function testCookies() {
+    const b = getB();
+    if (!b) { showToast('Selectionnez un navigateur', 'error'); return; }
+    const btn = document.getElementById('btn-test-cookies');
+    const res = document.getElementById('cookie-result');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true; res.textContent = '';
+    try {
+        const r = await fetch('/api/test_cookies', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({browser:b})});
+        const d = await r.json();
+        res.innerHTML = d.status==='ok' ? '<span style="color:var(--green);">OK</span>' : '<span style="color:var(--red);">Echec</span>';
+        if (d.status !== 'ok') showToast(d.message, 'error');
+    } catch(e) { res.innerHTML = '<span style="color:var(--red);">Erreur</span>'; }
+    finally { btn.innerHTML = 'Tester'; btn.disabled = false; }
+}
+
+function updateFfmpegStatus(installed) {
+    const s = document.getElementById('ffmpeg-status');
+    const btn = document.getElementById('btn-install-ffmpeg');
+    if (installed) {
+        s.innerHTML = '<span style="color:var(--green);">Installe</span>';
+        btn.style.display = 'none';
+    } else {
+        s.innerHTML = '<span style="color:var(--red);">Manquant (requis pour la musique)</span>';
+        btn.style.display = 'inline-flex';
+    }
+}
+
+async function installFfmpeg() {
+    const btn = document.getElementById('btn-install-ffmpeg');
+    const s = document.getElementById('ffmpeg-status');
+    btn.innerHTML = '<span class="spinner"></span> Telechargement...'; btn.disabled = true;
+    s.innerHTML = '<span style="color:var(--orange);">Installation en cours (~100 MB)...</span>';
+    try {
+        const r = await fetch('/api/install_ffmpeg', {method:'POST'});
+        const d = await r.json();
+        if (d.status === 'ok') {
+            updateFfmpegStatus(true);
+            showToast('FFmpeg installe ! La musique fonctionne maintenant.', 'success');
+        } else {
+            s.innerHTML = '<span style="color:var(--red);">Echec: '+d.message+'</span>';
+            showToast('Erreur installation FFmpeg: '+d.message, 'error');
+        }
+    } catch(e) {
+        s.innerHTML = '<span style="color:var(--red);">Erreur de connexion</span>';
+        showToast('Erreur installation FFmpeg', 'error');
+    } finally { btn.innerHTML = 'Installer FFmpeg'; btn.disabled = false; }
+}
+
+async function updateYtdlp() {
+    const btn = document.getElementById('btn-update');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    try {
+        const r = await fetch('/api/update_ytdlp', {method:'POST'});
+        const d = await r.json();
+        showToast(d.status==='ok'?'Mis a jour ! Relancez l\'app.':'Echec: '+d.message, d.status==='ok'?'success':'error');
+    } catch(e) { showToast('Erreur', 'error'); }
+    finally { btn.innerHTML = 'Mettre a jour'; btn.disabled = false; }
+}
+
+async function checkForUpdate() {
+    try {
+        const r = await fetch('/api/check_update');
+        const d = await r.json();
+        if (d.update_available) {
+            const banner = document.getElementById('update-banner');
+            document.getElementById('update-text').textContent = 'Nouvelle version disponible : v' + d.latest;
+            if (d.download_url) {
+                document.getElementById('update-link').href = d.download_url;
+                document.getElementById('update-link').style.display = 'inline';
+            } else {
+                document.getElementById('update-link').style.display = 'none';
+            }
+            banner.style.display = 'block';
+            showToast('Mise a jour v' + d.latest + ' disponible !', 'success');
+        }
+    } catch(e) {}
+}
+
+(async function init() {
+    try {
+        const r = await fetch('/api/version');
+        const v = await r.json();
+        document.getElementById('app-version').textContent = 'Video & Music Downloader v' + v.version;
+    } catch(e) {}
+
+    try {
+        const r = await fetch('/api/cookies_status');
+        const d = await r.json();
+        document.getElementById('settings-banner').style.display = 'block';
+        if (d.yt_dlp_version) document.getElementById('ytdlp-version').textContent = 'v'+d.yt_dlp_version;
+        if (d.has_cookies_file) {
+            const s = document.getElementById('cookie-file-status');
+            s.textContent = 'cookies.txt OK'; s.style.color = 'var(--green)';
+        }
+        updateFfmpegStatus(d.ffmpeg_installed);
+    } catch(e) {}
+
+    checkForUpdate();
+})();
+
+document.getElementById('url-input').addEventListener('paste', () => setTimeout(fetchInfo, 300));
+document.getElementById('music-url').addEventListener('paste', () => setTimeout(fetchMusicInfo, 300));
+
+document.getElementById('music-format').addEventListener('change', function() {
+    document.getElementById('music-quality-card').style.display = ['flac','wav'].includes(this.value) ? 'none' : 'block';
+});
+</script>
+</body>
+</html>

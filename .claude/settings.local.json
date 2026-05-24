@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python app.py)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -match 'Python' } | Stop-Process -Force -Confirm:$false -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; \"stopped\")",
+      "PowerShell(pip install pywebview pyinstaller 2>&1)",
+      "PowerShell($f = Get-Item \"C:\\\\Users\\\\Rémi\\\\Desktop\\\\Youtube\\\\dist\\\\VideoDownloader.exe\"; \"$\\([math]::Round\\($f.Length / 1MB, 1\\)\\) MB\")",
+      "mcp__Claude_in_Chrome__select_browser",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "mcp__Claude_in_Chrome__find",
+      "Bash(where /R \"C:\\\\Program Files \\(x86\\)\\\\Inno Setup 6\" ISCC.exe)",
+      "Bash(where /R \"C:\\\\Program Files\\\\Inno Setup 6\" ISCC.exe)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\Rémi\\\\Desktop\\\\Youtube\\\\installer.iss\"\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $lines = $text -split \"`n\"; $lines[30]  # line 31 \\(0-indexed\\))"
+    ]
+  }
+}

@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -40,7 +41,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-gi python3-gi-cairo \
             gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-            libgirepository1.0-dev gcc libcairo2-dev \
+            libgirepository1.0-dev libgirepository-2.0-dev \
+            gcc libcairo2-dev \
             pkg-config python3-dev ffmpeg
 
       - name: Install macOS dependencies
@@ -71,20 +73,24 @@ jobs:
       - name: Build
         run: python build.py
 
-      - name: Rename artifact (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Rename artifact (Linux)
+        if: matrix.name == 'Linux'
+        run: mv dist/VideoDownloader dist/VideoDownloader-Linux
+
+      - name: Package macOS app
+        if: matrix.name == 'macOS'
         run: |
-          if [ "${{ matrix.name }}" = "macOS" ]; then
-            mv dist/VideoDownloader dist/VideoDownloader-macOS
-          else
-            mv dist/VideoDownloader dist/VideoDownloader-Linux
-          fi
+          cd dist
+          zip -r VideoDownloader-macOS.zip VideoDownloader.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: VideoDownloader-${{ matrix.name }}
-          path: dist/VideoDownloader*
+          path: |
+            dist/VideoDownloader.exe
+            dist/VideoDownloader-Linux
+            dist/VideoDownloader-macOS.zip
 
   release:
     needs: build
@@ -103,9 +109,9 @@ jobs:
         run: |
           mkdir release
           cp artifacts/VideoDownloader-Windows/VideoDownloader.exe release/VideoDownloader-Windows.exe
-          cp artifacts/VideoDownloader-macOS/VideoDownloader-macOS release/VideoDownloader-macOS
+          cp artifacts/VideoDownloader-macOS/VideoDownloader-macOS.zip release/VideoDownloader-macOS.zip
           cp artifacts/VideoDownloader-Linux/VideoDownloader-Linux release/VideoDownloader-Linux
-          chmod +x release/VideoDownloader-macOS release/VideoDownloader-Linux
+          chmod +x release/VideoDownloader-Linux
 
       - name: Get version from tag
         id: version
@@ -135,14 +141,14 @@ jobs:
 
             ### Telechargement
             - **Windows** : `VideoDownloader-Windows.exe`
-            - **macOS** : `VideoDownloader-macOS`
+            - **macOS** : `VideoDownloader-macOS.zip`
             - **Linux** : `VideoDownloader-Linux`
 
             ### Installation
             - **Windows** : Lancez le .exe directement
-            - **macOS** : `chmod +x VideoDownloader-macOS && ./VideoDownloader-macOS`
+            - **macOS** : Dézippez puis lancez `VideoDownloader.app`
             - **Linux** : `chmod +x VideoDownloader-Linux && ./VideoDownloader-Linux`
           files: |
             release/VideoDownloader-Windows.exe
-            release/VideoDownloader-macOS
+            release/VideoDownloader-macOS.zip
             release/VideoDownloader-Linux

@@ -51,10 +51,12 @@ def build():
         print("Corrigez les dependances puis relancez le build.")
         sys.exit(1)
 
+    use_onefile = system != "Darwin"
+
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--name", APP_NAME,
-        "--onefile",
+        "--onefile" if use_onefile else "--onedir",
         "--windowed",
         "--add-data", f"templates{os.pathsep}templates",
         "--add-data", f"icon.ico{os.pathsep}.",
